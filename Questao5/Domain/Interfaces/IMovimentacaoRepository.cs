@@ -6,6 +6,6 @@ namespace Questao5.Domain.Interfaces
     {
         void Create(Movimentacao movimentacao);
 
-        double GetAccountBalanceById(string id);
+        double Get(string id);
     }
 }

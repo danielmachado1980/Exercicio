@@ -1,48 +1,59 @@
 ﻿using MediatR;
+using Microsoft.OpenApi.Validations;
 using Questao5.Application.Commands.Requests;
 using Questao5.Application.Commands.Responses;
 using Questao5.Domain.Entities;
+using Questao5.Domain.Enumerators;
+using Questao5.Domain.Extensions;
 using Questao5.Domain.Interfaces;
+using Questao5.Infrastructure.Database.QueryStore.Requests;
 
-namespace Questao5.Infrastructure.Database.Handler
+namespace Questao5.Application.Handlers
 {
     public class CreateMovimentacaoHandler : IRequestHandler<CreateMovimentacaoRequest, CreateMovimentacaoResponse>
     {
-        private readonly IMovimentacaoRepository _movimentRepository;
-        private readonly IIdempotenciaRepository _idempontencyRepository;
+        private readonly IMediator _mediator;
+        private readonly IMovimentacaoRepository _movimentacaoRepository;
+        private readonly IIdempotenciaRepository _idempotenciaRepository;
 
-        public CreateMovimentacaoHandler(IMovimentacaoRepository movimentacaoRepository,
-                                         IIdempotenciaRepository idempotenciaRepository)
+        public CreateMovimentacaoHandler(IMediator mediator, IMovimentacaoRepository movimentacaoRepository, IIdempotenciaRepository idempotenciaRepository)
         {
-            _movimentRepository = movimentacaoRepository;
-            _idempontencyRepository = idempotenciaRepository;
+            _mediator = mediator;
+            _movimentacaoRepository = movimentacaoRepository;
+            _idempotenciaRepository = idempotenciaRepository;
         }
 
-        public Task<CreateMovimentacaoResponse> Handle(CreateMovimentacaoRequest request, CancellationToken cancellationToken)
+        public async Task<CreateMovimentacaoResponse> Handle(CreateMovimentacaoRequest request, CancellationToken cancellationToken)
         {
-            var movimentacao = new Movimentacao
-            {
-                IdConta = request.Conta,
-                Data = DateTime.Now,
-                Tipo = request.Tipo,
-                Valor = request.Valor
-            };
+            var idempotencia = await _mediator.Send(new FindIdempotenciaRequest { Id = request.IdRequisicao });
 
-            _movimentRepository.Create(movimentacao);
+            if (!string.IsNullOrEmpty(idempotencia.Result))
+                return new CreateMovimentacaoResponse { Id = idempotencia.Result };
 
-            var idempotencia = new Idempotencia
-            {
-                RequestId = request.IdRequisicao,
-                Result = movimentacao.Id
-            };
+            var conta = await _mediator.Send(new FindContaRequest { Numero = request.Conta });
 
-            _idempontencyRepository.Create(idempotencia);
+            if (string.IsNullOrEmpty(conta.Id))
+                throw new ArgumentException(string.Format("{0}-{1}", TipoErro.INVALID_ACCOUNT.ToString(), TipoErro.INVALID_ACCOUNT.GetDescription()));
+
+            if (!conta.Ativo)
+                throw new ArgumentException(string.Format("{0}-{1}", TipoErro.INACTIVE_ACCOUNT.ToString(), TipoErro.INACTIVE_ACCOUNT.GetDescription()));
+
+            if (request.Valor <= 0)
+                throw new ArgumentException(string.Format("{0}-{1}", TipoErro.INVALID_VALUE.ToString(), TipoErro.INVALID_VALUE.GetDescription()));
+
+            if (!request.Tipo.Equals("C") && !request.Tipo.Equals("D"))
+                throw new ArgumentException(string.Format("{0}-{1}", TipoErro.INVALID_TYPE.ToString(), TipoErro.INVALID_TYPE.GetDescription()));
+
+            var movimento = new Movimentacao { IdConta = conta.Id, Data = DateTime.Now, Tipo = request.Tipo, Valor = request.Valor };
+            _movimentacaoRepository.Create(movimento);
+
+            _idempotenciaRepository.Create(new Idempotencia { IdRequisicao = request.IdRequisicao, Result = movimento.Id });
 
             var result = new CreateMovimentacaoResponse
             {
-                Id = movimentacao.Id
+                Id = movimento.Id
             };
-            return Task.FromResult(result);
+            return await Task.FromResult(result);
         }
     }
 }

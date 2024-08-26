@@ -1,4 +1,4 @@
-﻿namespace Questao5.Domain.Entities.Account
+﻿namespace Questao5.Domain.Entities
 {
     public class Conta
     {

@@ -4,16 +4,16 @@ namespace Questao5.Domain.Enumerators
 {
     public enum TipoErro
     {
-        [Description("INVALID_ACCOUNT")]
+        [Description("Conta inválida")]
         INVALID_ACCOUNT,
 
-        [Description("INACTIVE_ACCOUNT")]
+        [Description("Conta inativa")]
         INACTIVE_ACCOUNT,
 
-        [Description("INVALID_VALUE")]
+        [Description("Apenas valores positivos são permitidos")]
         INVALID_VALUE,
 
-        [Description("INVALID_TYPE")]
-        INVALID_TYPE
+        [Description("Tipo de operação inválido")]
+        INVALID_TYPE,
     }
 }

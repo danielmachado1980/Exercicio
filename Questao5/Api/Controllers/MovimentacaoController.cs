@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Questao5.Api.Models;
 using Questao5.Application.Commands.Requests;
 using Questao5.Application.Commands.Responses;
+using Questao5.Application.Queries.Requests;
+using Questao5.Application.Queries.Responses;
 
 namespace Questao5.Api.Controllers
 {
@@ -16,14 +18,17 @@ namespace Questao5.Api.Controllers
         public Task<CreateMovimentacaoResponse> Create([FromServices] IMediator mediator,
                                                        [FromBody] CreateMovimentacaoRequest command)
         {
-            try
-            {
-                return mediator.Send(command);
-            }
-            catch (Exception ex)
-            {
-                throw;//return BadRequest(ex.Message);
-            }
+            return mediator.Send(command);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(SaldoContaResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+        [Route("saldo/{conta}")]
+        public Task<SaldoContaResponse> Balance([FromServices] IMediator mediator, 
+                                                [FromRoute] int conta)
+        {
+            return mediator.Send(new SaldoContaRequest { Conta = conta });
         }
     }
 }

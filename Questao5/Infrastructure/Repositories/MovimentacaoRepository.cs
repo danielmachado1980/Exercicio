@@ -1,5 +1,6 @@
 ﻿using Dapper;
-
+using Questao5.Domain.Entities;
+using Questao5.Domain.Interfaces;
 using Questao5.Infrastructure.Sqlite;
 
 namespace Questao5.Infrastructure.Repositories
@@ -12,22 +13,22 @@ namespace Questao5.Infrastructure.Repositories
             _db = db;
         }
 
-        public void Create(Moviment moviment)
+        public void Create(Movimentacao movimentacao)
         {
             using var connection = _db.Connection;                           
             connection.Open();
-            moviment.Id = Guid.NewGuid().ToString();
+            movimentacao.Id = Guid.NewGuid().ToString();
             using (var transaction = connection.BeginTransaction())
             {
                 
                 var sSQLCommand = "INSERT INTO movimento (idmovimento, idcontacorrente, datamovimento, tipomovimento, valor) " +
-                                "VALUES (@Id, @IdCheckingAccount, @Date, @MovimentType, @Value)";
-                connection.Execute(sSQLCommand, moviment);
+                                "VALUES (@Id, @IdConta, @Data, @Tipo, @Valor)";
+                connection.Execute(sSQLCommand, movimentacao);
                 transaction.Commit();
             }            
         }
 
-        public double GetAccountBalanceById(string id)
+        public double Get(string id)
         {
             using var connection = _db.Connection;
            
@@ -38,7 +39,6 @@ namespace Questao5.Infrastructure.Repositories
                                 "FROM movimento " +
                                 "WHERE idcontacorrente = @idContaCorrente";
             return connection.QuerySingleOrDefault<double>(sSQLCommand, param: new { idContaCorrente = id });
-           
         }
     }
 }
